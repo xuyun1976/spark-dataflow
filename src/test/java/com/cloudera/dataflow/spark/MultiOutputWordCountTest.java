@@ -57,13 +57,13 @@ public class MultiOutputWordCountTest {
     PCollectionView<String, ?> regexView = regex.apply(View.<String>asSingleton());
     PCollectionTuple luc = union.apply(new CountWords(regexView));
     //PCollection<Long> unique = luc.get(lowerCnts).apply(ApproximateUnique.<KV<String,
-      //  Long>>globally(16));
+    //  Long>>globally(16));
 
     EvaluationResult res = SparkPipelineRunner.create().run(p);
     Iterable<KV<String, Long>> actualLower = res.get(luc.get(lowerCnts));
     Iterable<KV<String, Long>> actualUpper = res.get(luc.get(upperCnts));
     Assert.assertEquals("Here", actualUpper.iterator().next().getKey());
-   // Iterable<Long> actualUniqCount = res.get(unique);
+    // Iterable<Long> actualUniqCount = res.get(unique);
     //Assert.assertEquals(9, (long) actualUniqCount.iterator().next());
     int actualTotalWords = res.getAggregatorValue("totalWords", Integer.class);
     Assert.assertEquals(18, actualTotalWords);

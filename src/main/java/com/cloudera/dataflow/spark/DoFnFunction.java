@@ -104,10 +104,10 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
     @Override
     public <T> void sideOutput(TupleTag<T> tupleTag, T t) {
-      LOG.warning("sideoutput is an unsupported operation for DoFnFunctions. Use a " +
-          "MultiDoFunction");
-      throw new UnsupportedOperationException("sideOutput is an unsupported operation for " +
-          "doFunctions, use a MultiDoFunction instead.");
+      String message = "sideOutput is an unsupported operation for doFunctions, use a" +
+          "MultiDoFunction instead.";
+      LOG.warning(message);
+      throw new UnsupportedOperationException(message);
     }
 
     @Override

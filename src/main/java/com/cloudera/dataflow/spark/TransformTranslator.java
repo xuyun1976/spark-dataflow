@@ -52,6 +52,7 @@ import java.util.logging.Logger;
  */
 public final class TransformTranslator {
   private static final Logger LOG = Logger.getLogger(TransformTranslator.class.getName());
+
   private TransformTranslator() {
   }
 

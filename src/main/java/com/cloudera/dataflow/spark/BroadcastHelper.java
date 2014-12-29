@@ -22,8 +22,10 @@ import org.apache.spark.broadcast.Broadcast;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.logging.Logger;
 
 class BroadcastHelper<T> implements Serializable {
+  private static Logger LOG = Logger.getLogger(BroadcastHelper.class.getName());
   private Broadcast<byte[]> bcast;
   private final Coder<T> coder;
   private final T input;
@@ -46,10 +48,13 @@ class BroadcastHelper<T> implements Serializable {
   }
 
   private T deserialize() {
+    T val;
     try {
-      return coder.decode(new ByteArrayInputStream(bcast.value()), new Coder.Context(true));
-    } catch (IOException e) {
-      throw new IllegalStateException("Error deserializing broadcast variable", e);
+      val = coder.decode(new ByteArrayInputStream(bcast.value()), new Coder.Context(true));
+    } catch (IOException ioe) {
+      // this should not ever happen, log it if it does.
+      LOG.warning(ioe.getMessage());
     }
+    return val;
   }
 }

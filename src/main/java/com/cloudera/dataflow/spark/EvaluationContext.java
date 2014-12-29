@@ -77,9 +77,11 @@ public class EvaluationContext implements EvaluationResult {
     return defaultCoder;
   }
 
-  /**Coder<Iterable<Object>> getDefaultIterableCoder(Iterables iter) {
-
-  }*/
+  /**
+   * Coder<Iterable<Object>> getDefaultIterableCoder(Iterables iter) {
+   * <p/>
+   * }
+   */
 
   <I extends PInput> I getInput(PTransform<I, ?> transform) {
     @SuppressWarnings("unchecked")
