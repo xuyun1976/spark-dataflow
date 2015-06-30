@@ -17,6 +17,7 @@ package com.cloudera.dataflow.spark;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,13 +28,14 @@ import com.google.cloud.dataflow.sdk.coders.CannotProvideCoderException;
 import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.coders.CoderRegistry;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
+import com.google.cloud.dataflow.sdk.runners.AggregatorValues;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import com.google.cloud.dataflow.sdk.transforms.Max;
 import com.google.cloud.dataflow.sdk.transforms.Min;
-import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
 import com.google.cloud.dataflow.sdk.transforms.Sum;
 import com.google.cloud.dataflow.sdk.values.TypeDescriptor;
+import com.google.common.collect.ImmutableList;
 import org.apache.spark.Accumulator;
 import org.apache.spark.api.java.JavaSparkContext;
 
@@ -91,32 +93,24 @@ public class SparkRuntimeContext implements Serializable {
     return accum.value().getValue(aggregatorName, typeClass);
   }
 
-  public synchronized PipelineOptions getPipelineOptions() {
-    return deserializePipelineOptions(serializedPipelineOptions);
+  public <T> AggregatorValues<T> getAggregatorValues(Aggregator<?, T> aggregator) {
+    final T aggregatorValue = (T) getAggregatorValue(aggregator.getName(),
+        aggregator.getCombineFn().getOutputType().getRawType());
+    return new AggregatorValues<T>() {
+      @Override
+      public Collection<T> getValues() {
+        return ImmutableList.of(aggregatorValue);
+      }
+
+      @Override
+      public Map<String, T> getValuesAtSteps() {
+        throw new UnsupportedOperationException("getValuesAtSteps is not supported.");
+      }
+    };
   }
 
-  /**
-   * Creates and aggregator and associates it with the specified name.
-   *
-   * @param named Name of aggregator.
-   * @param sfunc Serializable function used in aggregation.
-   * @param <IN>  Type of inputs to aggregator.
-   * @param <OUT> Type of aggregator outputs.
-   * @return Specified aggregator
-   */
-  public synchronized <IN, OUT> Aggregator<IN, OUT> createAggregator(
-      String named,
-      SerializableFunction<Iterable<IN>, OUT> sfunc) {
-    @SuppressWarnings("unchecked")
-    Aggregator<IN, OUT> aggregator = (Aggregator<IN, OUT>) aggregators.get(named);
-    if (aggregator == null) {
-      NamedAggregators.SerFunctionState<IN, OUT> state = new NamedAggregators
-          .SerFunctionState<>(sfunc);
-      accum.add(new NamedAggregators(named, state));
-      aggregator = new SparkAggregator<>(named, state);
-      aggregators.put(named, aggregator);
-    }
-    return aggregator;
+  public synchronized PipelineOptions getPipelineOptions() {
+    return deserializePipelineOptions(serializedPipelineOptions);
   }
 
   /**
@@ -192,9 +186,9 @@ public class SparkRuntimeContext implements Serializable {
    */
   private static class SparkAggregator<IN, OUT> implements Aggregator<IN, OUT>, Serializable {
     private final String name;
-    private final NamedAggregators.State<IN, ?, ?> state;
+    private final NamedAggregators.State<IN, ?, OUT> state;
 
-    SparkAggregator(String name, NamedAggregators.State<IN, ?, ?> state) {
+    SparkAggregator(String name, NamedAggregators.State<IN, ?, OUT> state) {
       this.name = name;
       this.state = state;
     }
@@ -211,8 +205,7 @@ public class SparkRuntimeContext implements Serializable {
 
     @Override
     public Combine.CombineFn<IN, ?, OUT> getCombineFn() {
-      //TODO: Support this.
-      throw new UnsupportedOperationException("getCombineFn is not yet supported.");
+      return state.getCombineFn();
     }
   }
 }

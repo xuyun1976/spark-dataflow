@@ -118,6 +118,11 @@ public class EvaluationContext implements EvaluationResult {
   }
 
   void setRDD(PValue pvalue, JavaRDDLike<?, ?> rdd) {
+    try {
+      rdd.rdd().setName(pvalue.getName());
+    } catch (IllegalStateException e) {
+      // name not set, ignore
+    }
     rdds.put(pvalue, rdd);
     leafRdds.add(rdd);
   }
@@ -168,8 +173,7 @@ public class EvaluationContext implements EvaluationResult {
   @Override
   public <T> AggregatorValues<T> getAggregatorValues(Aggregator<?, T> aggregator)
       throws AggregatorRetrievalException {
-    //TODO: Support this.
-    throw new UnsupportedOperationException("getAggregatorValues is not yet supported.");
+    return runtime.getAggregatorValues(aggregator);
   }
 
   @Override
@@ -194,8 +198,9 @@ public class EvaluationContext implements EvaluationResult {
     SparkContextFactory.stopSparkContext(jsc);
   }
 
+  /** The runner is blocking. */
   @Override
   public State getState() {
-    return State.UNKNOWN;
+    return State.DONE;
   }
 }
