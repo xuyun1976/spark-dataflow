@@ -528,9 +528,7 @@ public final class TransformTranslator {
         // Use a coder to convert the objects in the PCollection to byte arrays, so they
         // can be transferred over the network.
         Coder<T> coder = context.getOutput(transform).getCoder();
-        JavaRDD<byte[]> rdd = context.getSparkContext().parallelize(
-            CoderHelpers.toByteArrays(elems, coder));
-        context.setOutputRDD(transform, rdd.map(CoderHelpers.fromByteFunction(coder)));
+        context.setOutputRDDFromValues(transform, elems, coder);
       }
     };
   }
@@ -601,7 +599,7 @@ public final class TransformTranslator {
       for (PCollectionView<?> view : views) {
         Iterable<WindowedValue<?>> collectionView = context.getPCollectionView(view);
         Coder<Iterable<WindowedValue<?>>> coderInternal = view.getCoderInternal();
-        BroadcastHelper<?> helper = new BroadcastHelper<>(collectionView, coderInternal);
+        BroadcastHelper<?> helper = BroadcastHelper.create(collectionView, coderInternal);
         //broadcast side inputs
         helper.broadcast(context.getSparkContext());
         sideInputs.put(view.getTagInternal(), helper);
