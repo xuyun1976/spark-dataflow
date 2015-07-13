@@ -32,20 +32,9 @@ public final class HadoopIO {
     private Read() {
     }
 
-    public static Bound from(String filepattern) {
-      return new Bound().from(filepattern);
-    }
-
-    public static Bound withFormatClass(Class<? extends FileInputFormat<?, ?>> format) {
-      return new Bound().withFormatClass(format);
-    }
-
-    public static Bound withKeyClass(Class<?> key) {
-      return new Bound().withKeyClass(key);
-    }
-
-    public static Bound withValueClass(Class<?> value) {
-      return new Bound().withValueClass(value);
+    public static <K, V> Bound<K, V> from(String filepattern,
+        Class<? extends FileInputFormat<K, V>> format, Class<K> key, Class<V> value) {
+      return new Bound<>(filepattern, format, key, value);
     }
 
     public static class Bound<K, V> extends PTransform<PInput, PCollection<KV<K, V>>> {
@@ -55,32 +44,20 @@ public final class HadoopIO {
       private final Class<K> keyClass;
       private final Class<V> valueClass;
 
-      Bound() {
-        this(null, null, null, null);
-      }
-
       Bound(String filepattern, Class<? extends FileInputFormat<K, V>> format, Class<K> key,
           Class<V> value) {
+        Preconditions.checkNotNull(filepattern,
+                                   "need to set the filepattern of an HadoopIO.Read transform");
+        Preconditions.checkNotNull(format,
+                                   "need to set the format class of an HadoopIO.Read transform");
+        Preconditions.checkNotNull(key,
+                                   "need to set the key class of an HadoopIO.Read transform");
+        Preconditions.checkNotNull(value,
+                                   "need to set the value class of an HadoopIO.Read transform");
         this.filepattern = filepattern;
         this.formatClass = format;
         this.keyClass = key;
         this.valueClass = value;
-      }
-
-      public Bound<K, V> from(String file) {
-        return new Bound<>(file, formatClass, keyClass, valueClass);
-      }
-
-      public Bound<K, V> withFormatClass(Class<? extends FileInputFormat<K, V>> format) {
-        return new Bound<>(filepattern, format, keyClass, valueClass);
-      }
-
-      public Bound<K, V> withKeyClass(Class<K> key) {
-        return new Bound<>(filepattern, formatClass, key, valueClass);
-      }
-
-      public Bound<K, V> withValueClass(Class<V> value) {
-        return new Bound<>(filepattern, formatClass, keyClass, value);
       }
 
       public String getFilepattern() {
@@ -101,15 +78,6 @@ public final class HadoopIO {
 
       @Override
       public PCollection<KV<K, V>> apply(PInput input) {
-        Preconditions.checkNotNull(filepattern,
-            "need to set the filepattern of an HadoopIO.Read transform");
-        Preconditions.checkNotNull(formatClass,
-            "need to set the format class of an HadoopIO.Read transform");
-        Preconditions.checkNotNull(keyClass,
-            "need to set the key class of an HadoopIO.Read transform");
-        Preconditions.checkNotNull(valueClass,
-            "need to set the value class of an HadoopIO.Read transform");
-
         return PCollection.createPrimitiveOutputInternal(input.getPipeline(),
             WindowingStrategy.globalDefault(), PCollection.IsBounded.BOUNDED);
       }
