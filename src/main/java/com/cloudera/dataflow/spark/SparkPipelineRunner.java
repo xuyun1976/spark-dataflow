@@ -96,8 +96,13 @@ public final class SparkPipelineRunner extends PipelineRunner<EvaluationResult> 
    * @return A pipeline runner that will execute with specified options.
    */
   public static SparkPipelineRunner fromOptions(PipelineOptions options) {
-    SparkPipelineOptions sparkOptions =
-        PipelineOptionsValidator.validate(SparkPipelineOptions.class, options);
+	  SparkPipelineOptions sparkOptions = null;
+	  
+	  if (options instanceof SparkStreamingPipelineOptions)
+		  sparkOptions = PipelineOptionsValidator.validate(SparkStreamingPipelineOptions.class, options);
+	  else
+		  sparkOptions = PipelineOptionsValidator.validate(SparkPipelineOptions.class, options);
+	  
     return new SparkPipelineRunner(sparkOptions);
   }
 

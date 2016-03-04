@@ -50,6 +50,7 @@ License.
                         <reuseForks>false</reuseForks>
                     </configuration>
                 </plugin>
+				<!--
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
@@ -68,6 +69,7 @@ License.
                         </execution>
                     </executions>
                 </plugin>
+				-->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
@@ -251,10 +253,12 @@ License.
             </plugins>
         </pluginManagement>
         <plugins>
+			<!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
+			-->
             <plugin>
                 <groupId>org.apache.rat</groupId>
               <artifactId>apache-rat-plugin</artifactId>
@@ -359,10 +363,12 @@ License.
 
     <reporting>
         <plugins>
+			<!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
+			-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>

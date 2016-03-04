@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.esotericsoftware.minlog.Log;
 import com.google.api.client.util.Lists;
 import com.google.api.client.util.Maps;
 import com.google.api.client.util.Sets;
@@ -49,8 +50,10 @@ import kafka.serializer.Decoder;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
+import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaDStreamLike;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
@@ -69,7 +72,6 @@ import com.cloudera.dataflow.spark.SparkPipelineTranslator;
 import com.cloudera.dataflow.spark.TransformEvaluator;
 import com.cloudera.dataflow.spark.TransformTranslator;
 import com.cloudera.dataflow.spark.WindowingHelpers;
-
 /**
  * Supports translation between a DataFlow transform, and Spark's operations on DStreams.
  */
@@ -90,6 +92,38 @@ public final class StreamingTransformTranslator {
       }
     };
   }
+  
+  private static <T> TransformEvaluator<TextIO.Write.Bound<T>> writeText() {
+	    return new TransformEvaluator<TextIO.Write.Bound<T>>() {
+	      @Override
+	      public void evaluate(final TextIO.Write.Bound<T> transform, EvaluationContext context) {
+	    	  
+	    	  @SuppressWarnings("unchecked")
+	          JavaDStreamLike<WindowedValue<T>, ?, JavaRDD<WindowedValue<T>>> dstream =
+	              (JavaDStreamLike<WindowedValue<T>, ?, JavaRDD<WindowedValue<T>>>)
+	              ((StreamingEvaluationContext) context).getStream(transform);
+	    	  
+	    	  JavaDStream<T> jds = dstream.map(WindowingHelpers.<T>unwindowFunction());
+	          
+	    	  jds.foreachRDD(new Function2<JavaRDD<T>, Time, Void>()
+	    	  {
+	    		  @Override
+	    		  public Void call(JavaRDD<T> rdd, Time time) throws Exception 
+	    		  {
+	    			  if (rdd.count() == 0)
+	    				  return null;
+	    			  
+//	    			  List<T> list = rdd.collect();
+//	    			  Log.info("----------------" + list);
+	    			  
+	    			  rdd.saveAsTextFile(transform.getFilenamePrefix() + "-" + time.milliseconds());
+	    			  
+	    			  return null;
+	    		  }
+	    	  });
+	      }
+	    };
+	  }
 
   private static <K, V> TransformEvaluator<KafkaIO.Read.Unbound<K, V>> kafka() {
     return new TransformEvaluator<KafkaIO.Read.Unbound<K, V>>() {
@@ -263,7 +297,7 @@ public final class StreamingTransformTranslator {
       }
     };
   }
-
+  
   /**
    * RDD output function.
    *
@@ -345,6 +379,8 @@ public final class StreamingTransformTranslator {
     EVALUATORS.put(KafkaIO.Read.Unbound.class, kafka());
     EVALUATORS.put(Window.Bound.class, window());
     EVALUATORS.put(Flatten.FlattenPCollectionList.class, flattenPColl());
+    
+    EVALUATORS.put(TextIO.Write.Bound.class, writeText());
   }
 
   private static final Set<Class<? extends PTransform>> UNSUPPORTED_EVALUATORS = Sets
@@ -352,8 +388,8 @@ public final class StreamingTransformTranslator {
 
   static {
     //TODO - add support for the following
-    UNSUPPORTED_EVALUATORS.add(TextIO.Read.Bound.class);
-    UNSUPPORTED_EVALUATORS.add(TextIO.Write.Bound.class);
+    //UNSUPPORTED_EVALUATORS.add(TextIO.Read.Bound.class);
+    //UNSUPPORTED_EVALUATORS.add(TextIO.Write.Bound.class);
     UNSUPPORTED_EVALUATORS.add(AvroIO.Read.Bound.class);
     UNSUPPORTED_EVALUATORS.add(AvroIO.Write.Bound.class);
     UNSUPPORTED_EVALUATORS.add(HadoopIO.Read.Bound.class);
